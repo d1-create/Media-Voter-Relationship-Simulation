@@ -321,11 +321,11 @@ int main() {
     int total_days = getSafeIntegerInput("Enter simulation timeline lifespan in turns/days (e.g., 10 - 750): ", 10, 750);
 
     std::cout << "Options:\n";
-    std::cout << "1. United States  [Free-Market Commercialization, High Polarisation, No State Anchor]\n";
-    std::cout << "2. United Kingdom [Regulated Marketplace, Public Anchor (BBC)]\n";
-    std::cout << "3. Germany        [High Institutional Trust, Dual-System Cohesion ]\n";
-    std::cout << "4. Russia         [Totalitarian State Control, Hardcoded Regime Propaganda Core]\n";
-    std::cout << "5. India          [Hyper-Competitive Market Saturation, Visual Sensationalism]\n";
+    std::cout << "1. United States  [Free-Market, High Polarisation, No State Anchor]\n";
+    std::cout << "2. United Kingdom [Regulated Media, Public Anchor (BBC)]\n";
+    std::cout << "3. Germany        [High Institutional Trust]\n";
+    std::cout << "4. Russia         [Totalitarian State Control, State Propaganda]\n";
+    std::cout << "5. India          [Hyper-Competitive Media]\n";
 
     int nation_chosen = getSafeIntegerInput("Enter the nation you would like to simulate the voter-media relationship of (1-5): ", 1, 5);
     SimulationPresets selected_mode = SimulationPresets::UNITED_STATES;
@@ -398,7 +398,7 @@ int main() {
     std::cout << "\n========================================================================\n";
     std::cout << "SIMULATION CYCLE FINALIZED SUCCESSFULLY\n";
     std::cout << "========================================================================\n";
-    std::cout << "-> Preset: " << profile_name;
+    std::cout << "-> Preset: " << profile_name << "\n";
     std::cout << "-> Operational Turns Processed: " << total_days << " Days.\n";
     std::cout << "-> Finalised population profiles exported cleanly to hard disk.\n";
     std::cout << "-> Open 'simulation_log.txt' to scroll your chronological graphs.\n";

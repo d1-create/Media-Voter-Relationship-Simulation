@@ -2,6 +2,16 @@
 
 An agent-based, discrete-time simulation in modern C++ modeling ideological polarization, echo chambers, and commercial media radicalization.
 
+## 📌 Table of Contents
+* [1. Project Overview](#1-project-overview)
+* [2. How it Works](#2-how-it-works)
+    * [Stage One](#stage-one)
+    * [Stage Two](#stage-two)
+    * [Stage Three](#stage-three)
+* [3. Important Notes](#notes-important)
+
+## 1. Project Overview
+
 The project synthesizes a basic version of two formal models from computational methods:
 1. **The Deffuant–Weisbuch Bounded Confidence Model (2000):** Individual citizens filter ideological input through a strict cognitive tolerance threshold ($\epsilon$), updating personal belief states via linear convergence only when a signal falls within their acceptance window.
 2. **The Hotelling–Downs Spatial Competition Model (1957):** Competing media firms dynamically adjust ideological coordinates ($B_j$) across a continuous 1D interval $[-1.0, 1.0]$ based on revenue optimization, oscillating between median-voter capture and fringe-monopoly extraction.

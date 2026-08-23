@@ -72,9 +72,10 @@ public:
     float average_voter_bias = 0.0f;
     //Settings
     bool state_media_exists = true;
+
+    // ### FUNCTIONS ###
     //Constructor/Startup Function
     MediaBiasSimulator(int voter_number, int outlet_number);
-    
     //Terminal Output Function
     void outputVoterBias();
     //Terminal Output Function
@@ -103,6 +104,7 @@ public:
 
     //AI-Made ASCII Function (Tedious Graph Work)
     void generateReportAndGraph();
-
+    //Polarisation Bar
+    void renderStandardDeviationBar();
 
 };

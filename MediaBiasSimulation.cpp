@@ -217,9 +217,55 @@ void MediaBiasSimulator::generateReportAndGraph() {
 
     log_output("\n========================================================================\n");
     if (file.is_open()) file.close();
+
+    //render polarisation bar
+    renderStandardDeviationBar();
 }
+void MediaBiasSimulator::renderStandardDeviationBar(){
+    if (voters.empty()) return;
+    float sum_squared_diff = 0.0f;
+    for (const auto& v : voters) {
+        float diff = v.bias-average_voter_bias;
+        sum_squared_diff +=diff * diff;
+    }
+    float variance = sum_squared_diff/voters.size();
+    float standard_deviation = std::sqrt(variance);
+    // make a 20 character long progress bar
+    const int BAR_MAX_WIDTH = 20;
+    int filled_length = static_cast<int>(standard_deviation * BAR_MAX_WIDTH);
 
+    //logic error check
+    if (filled_length > BAR_MAX_WIDTH) filled_length = BAR_MAX_WIDTH;
+    if (filled_length < 0) filled_length = 0;
+    std::string visual_bar = "[";
+    for (int i = 0; i < BAR_MAX_WIDTH; ++i) {
+        if (i < filled_length) {
+            visual_bar += "█"; // filled part
+        } else {
+            visual_bar += "░"; // empty part
+        }
+    }
+    visual_bar += "]";
 
+    // Open file in append mode to duplicate terminal logs to disk
+    std::ofstream file("simulation_log.txt", std::ios::app);
+    
+    // 4. Output the metrics
+    bool should_print_to_screen = (time_days % 20 == 0);
+    
+    auto log_stream = [&](const std::string& msg) {
+        if (should_print_to_screen) std::cout << msg;
+        if (file.is_open()) file << msg;
+    };
+
+    std::stringstream ss;
+    ss << "Polarisation (Std Deviation): " << visual_bar << " " 
+       << std::fixed << std::setprecision(3) << standard_deviation << "\n";
+    
+    log_stream(ss.str());
+    if (file.is_open()) file.close();
+
+}
 
 //Main function for executing turns
 void MediaBiasSimulator::tick(){
@@ -250,8 +296,8 @@ void MediaBiasSimulator::tick(){
 int main() {
     // Instantiate the class once
     // Usual ratio of voters to outlets is 100:1 or (1000+:1 in reality)
-    MediaBiasSimulator sim(4000,4);
-    for(int i=0;i<=100;i++){
+    MediaBiasSimulator sim(30000,12);
+    for(int i=0;i<=500;i++){
         sim.tick();
     }
     return 0;

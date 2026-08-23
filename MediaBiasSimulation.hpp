@@ -1,27 +1,33 @@
 #pragma once
 
+#include <memory>
+
 struct MediaBiasSimulator;
 
-//State Media
-struct StateMediaOutlet{
-    int id = -1; 
-    float bias = 0.0f;
-    float total_influence = 0.0f; // State still tracks views for data analysis
-    float turn_influence = 0.0f;  // But no radicalisation
-};
-
-//Media Outlet Struct (Profit Driven)
 struct MediaOutlet{
     int id = 0;
     float bias = 0.0f;
     float total_influence = 0.0f;
     float turn_influence = 0.0f;
+
+    void OutputData();
+};
+
+//State Media
+struct StateMediaOutlet : MediaOutlet{
+    // The State Media still tracks views for data analysis
+    // But no radicalisation exists
+    StateMediaOutlet(){
+        id=-1; // Sentinel value as exception
+    }
+};
+
+//Media Outlet Struct (Profit Driven)
+struct PrivateMediaOutlet : MediaOutlet{
     //days the outlet has not been making a profit
     int consecutive_days_starving = 0; 
     //Change Bias If No Influence
     void radicaliseOutlets(MediaBiasSimulator& sim);
-
-    void OutputData();
 };
 
 //Voter Struct (Bias and Interest Driven)
@@ -29,8 +35,7 @@ struct Voter{
     int id = 0;
     float bias = 0.0f;
     //Function checking the bias a voter gains from a media outlet
-    void watchMediaOutlet(float voter_tolerance, float learning_rate, MediaOutlet& outlet);      //private media override
-    void watchMediaOutlet(float voter_tolerance, float learning_rate, StateMediaOutlet& outlet); //state media override
+    void watchMediaOutlet(float voter_tolerance, float learning_rate, MediaOutlet& outlet);  
 
     void OutputData();
 };
@@ -62,10 +67,11 @@ public:
 
     //Array of organisations and peoples
     std::vector<Voter> voters;
-    std::vector<MediaOutlet> outlets;
-    StateMediaOutlet state_media; // #TODO May make into a vector and add government support
+    std::vector<std::unique_ptr<MediaOutlet>> outlets;
     //Data
     float average_voter_bias = 0.0f;
+    //Settings
+    bool state_media_exists = true;
     //Constructor/Startup Function
     MediaBiasSimulator(int voter_number, int outlet_number);
     

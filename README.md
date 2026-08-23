@@ -9,6 +9,7 @@ An agent-based, discrete-time simulation in modern C++ modeling ideological pola
     * [Stage Two](#stage-two)
     * [Stage Three](#stage-three)
 * [3. Important Notes](#notes-important)
+* [4. Speed And Efficiency](#Data-Driven-vs-OOP)
 
 ## 1. Project Overview
 
@@ -36,3 +37,7 @@ Data is exported to a file via graphs. One can visualise changes incrementally (
 
 The program relies strictly on the standard C++ runtime library with zero external dependencies.
 **This program is not designed for full-scale simulation. It is merely an enjoyable simulation and project which simulates a basic dynamic between voters and media in a world that desires polarisation and with minimal state intervention.**
+
+## Data-Driven vs OOP
+
+Data Driven approaches are far faster due to cache efficiency (storing in a sequential order in memory). It may be implemented in the future. The current model is a Object Oriented Model, which is generally easier to read/write c++ in.

@@ -9,6 +9,7 @@
 #include <vector>   // Import vector for dynamic allocation
 #include <cmath>
 #include <string>
+#include <algorithm>
 #include <iomanip>  //Custom Graphs
 #include <random>   // Required header
 
@@ -25,16 +26,8 @@ void Voter::watchMediaOutlet(float voter_tolerance, float learning_rate, MediaOu
         outlet.turn_influence += 1.0f;
     }
 }
-void Voter::watchMediaOutlet(float voter_tolerance, float learning_rate, StateMediaOutlet& outlet){
-    if(outlet.bias>=(bias-voter_tolerance) && outlet.bias<=(bias+voter_tolerance)){
-        float change = learning_rate*(outlet.bias-bias);//change in bias
-        bias+=change;
-        outlet.total_influence += 1.0f;
-        outlet.turn_influence += 1.0f;
-    }
-}
 
-void MediaOutlet::radicaliseOutlets(MediaBiasSimulator& sim){
+void PrivateMediaOutlet::radicaliseOutlets(MediaBiasSimulator& sim){
     // Get Market Average
     float market_average = static_cast<float>(sim.voters.size()) / sim.outlets.size();
 
@@ -135,12 +128,16 @@ MediaBiasSimulator::MediaBiasSimulator(int voter_number, int outlet_number){
         v.id = i;
         voters.push_back(v);
     }
-    outlets.reserve(outlet_number);
-    for(int i=0;i<outlet_number;i++){
-        MediaOutlet m;
-        m.bias = getRandomSpectrum();
-        m.id = i;
-        outlets.push_back(m);
+    outlets.reserve(outlet_number+1); //state media so +1
+    for(int i = 0; i < outlet_number; i++){
+        auto m = std::make_unique<PrivateMediaOutlet>(); 
+        m->bias = getRandomSpectrum();
+        m->id = i;
+        outlets.push_back(std::move(m)); // Move ownership directly into the vector array
+    }
+    if(state_media_exists){
+        auto s = std::make_unique<StateMediaOutlet>();
+        outlets.push_back(std::move(s));
     }
 }
 
@@ -151,112 +148,78 @@ void MediaBiasSimulator::outputVoterBias(){
     }
 }
 void MediaBiasSimulator::outputOutletBias(){
-    for(MediaOutlet& m: outlets){
-        m.OutputData();
+    for(auto& m: outlets){
+        m->OutputData();
     }
 }
 
-void MediaBiasSimulator::generateReportAndGraph(){
-    // 1. Set up 10 bins across the political spectrum [-1.0 to 1.0]
+//Get Data
+void MediaBiasSimulator::generateReportAndGraph() {
     const int NUM_BINS = 10;
     std::vector<int> bins(NUM_BINS, 0);
     int max_bin_count = 0;
 
-    // 2. Count voters into their matching visual bins
+    // 1. Map and count voters into visual array bins
     for (const auto& voter : voters) {
-        // Map voter bias from [-1.0, 1.0] to a bin index [0, 9]
-        float normalized = (voter.bias + 1.0f) / 2.0f; // Scale to [0.0, 1.0]
-        int bin_idx = static_cast<int>(normalized * NUM_BINS);
+        int bin_idx = static_cast<int>(((voter.bias + 1.0f) / 2.0f) * NUM_BINS);
+        bin_idx = std::clamp(bin_idx, 0, NUM_BINS - 1);
         
-        // Prevent out-of-bounds errors on exact 1.0 extreme right values
-        if (bin_idx >= NUM_BINS) bin_idx = NUM_BINS - 1;
-        if (bin_idx < 0) bin_idx = 0;
-
         bins[bin_idx]++;
-        if (bins[bin_idx] > max_bin_count) {
-            max_bin_count = bins[bin_idx]; // Find highest peak for scaling
-        }
+        max_bin_count = std::max(max_bin_count, bins[bin_idx]);
     }
 
-    // Determine performance condition: Only print text to terminal every 20 days
+    // 2. Identify display routing parameters
     bool should_print_to_screen = (time_days % 20 == 0);
-
-    // Open file in append mode so multiple frames build a history logs file
     std::ofstream file("simulation_log.txt", std::ios::app);
 
-    // 3. Render the Visual ASCII Chart
-    if (should_print_to_screen) {
-        std::cout << "\n================= VOTER DISTRIBUTION & MEDIA LOCATIONS (Day " << time_days << ") =================\n\n";
-    }
-    if (file.is_open()) {
-        file << "\n================= VOTER DISTRIBUTION & MEDIA LOCATIONS (Day " << time_days << ") =================\n\n";
-    }
-    
-    // Step through the bins from Left to Right
+    // Lambda helper to funnel text to both active streams simultaneously
+    auto log_output = [&](const std::string& text) {
+        if (should_print_to_screen) std::cout << text;
+        if (file.is_open()) file << text;
+    };
+
+    // 3. Render Header
+    log_output("\n================= VOTER DISTRIBUTION & MEDIA LOCATIONS (Day " + std::to_string(time_days) + ") =================\n\n");
+
+    // 4. Step through rows and render spectrum lines
     for (int i = 0; i < NUM_BINS; ++i) {
-        // Calculate the spectrum label for this specific row
         float bin_center = -1.0f + (i * 0.2f) + 0.1f;
         
-        // Use clean C++ formatting
-        if (should_print_to_screen) {
-            std::cout << "[" << std::fixed << std::setw(4) << std::setprecision(1) << bin_center << "]: ";
-        }
-        if (file.is_open()) {
-            file << "[" << std::fixed << std::setw(4) << std::setprecision(1) << bin_center << "]: ";
-        }
-
-        // Calculate how many bars to print based on proportional scale
-        int bar_length = 0;
-        if (max_bin_count > 0) {
-            // Limits maximum bar width to 40 characters for tidy screen layout
-            bar_length = (bins[i] * 40) / max_bin_count; 
-        }
-
-        // Draw the voter population bar
-        std::string bar = "";
-        for (int b = 0; b < bar_length; ++b) {
-            bar += "█";
-        }
-        if (should_print_to_screen) {
-            std::cout << bar;
-        }
-        if (file.is_open()) {
-            file << bar;
-        }
-
-        // 4. Overlay Media Outlets matching this specific spectrum slice
-        for (const auto& outlet : outlets) {
-            float norm_outlet = (outlet.bias + 1.0f) / 2.0f;
-            int outlet_bin = static_cast<int>(norm_outlet * NUM_BINS);
-            if (outlet_bin >= NUM_BINS) outlet_bin = NUM_BINS - 1;
-            if (outlet_bin < 0) outlet_bin = 0;
-
-            // If an outlet sits inside this bin, print its ID token on top
-            if (outlet_bin == i) {
-                if (should_print_to_screen) {
-                    std::cout << "  <-- [Outlet " << outlet.id << " (Bias: " << outlet.bias << ")]";
-                }
-                if (file.is_open()) {
-                    file << "  <-- [Outlet " << outlet.id << " (Bias: " << outlet.bias << ")]";
+        // Format the political slice bracket
+        std::stringstream line;
+        line << "[" << std::fixed << std::setw(4) << std::setprecision(1) << bin_center << "]: ";
+        
+        // Generate population bars instantly using structural fill constructors
+        if (max_bin_count > 0 && bins[i] > 0) {
+            if (max_bin_count > 0 && bins[i] > 0) {
+                int bar_length = (bins[i] * 40) / max_bin_count;
+                for (int b = 0; b < bar_length; ++b) {
+                    line << "█"; // Safely passes the multibyte UTF-8 block token
                 }
             }
         }
-        if (should_print_to_screen) {
-            std::cout << "\n";
+        
+        // Match smart-pointer outlet keys to row bins
+        for (const auto& outlet : outlets) {
+            int outlet_bin = static_cast<int>(((outlet->bias + 1.0f) / 2.0f) * NUM_BINS);
+            outlet_bin = std::clamp(outlet_bin, 0, NUM_BINS - 1);
+
+            if (outlet_bin == i) {
+                // If it's your sentinel state media component, name it explicitly
+                std::string label = (outlet->id == -1) ? "State Media" : "Outlet " + std::to_string(outlet->id);
+                line << "  <-- [" << label << " (Bias: " << std::fixed << std::setprecision(2) << outlet->bias << ")]";
+            }
         }
-        if (file.is_open()) {
-            file << "\n";
-        }
+        
+        line << "\n";
+        log_output(line.str());
     }
-    
-    if (should_print_to_screen) {
-        std::cout << "\n========================================================================\n";
-    }
-    if (file.is_open()) {
-        file << "\n========================================================================\n";
-        file.close(); // Safely save data onto disk
-    }
+
+    log_output("\n========================================================================\n");
+    if (file.is_open()) file.close();
 }
+
+
 
 //Main function for executing turns
 void MediaBiasSimulator::tick(){
@@ -266,14 +229,16 @@ void MediaBiasSimulator::tick(){
 
     // Stage One : Voters/Viewers watch media
     for(Voter& voter : voters){
-        voter.watchMediaOutlet(voter_tolerance, learning_rate, state_media); //state media gets the priority
-        for(MediaOutlet& mediaoutlet : outlets){
-            voter.watchMediaOutlet(voter_tolerance, learning_rate, mediaoutlet);
+        for(auto& mediaoutlet : outlets){
+            voter.watchMediaOutlet(voter_tolerance, learning_rate, *mediaoutlet);
         }
     }
     // Stage Two : Media Outlets analyse data
-    for(MediaOutlet& mediaoutlet : outlets){
-        mediaoutlet.radicaliseOutlets(*this);
+    for(auto& mediaoutlet : outlets){
+        if(mediaoutlet->id!=-1){
+            PrivateMediaOutlet* private_outlet = static_cast<PrivateMediaOutlet*>(mediaoutlet.get());
+            private_outlet->radicaliseOutlets(*this);
+        }
     }
     
     // Stage Three : Generate Graphs

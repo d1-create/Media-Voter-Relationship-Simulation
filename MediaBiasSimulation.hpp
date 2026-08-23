@@ -2,6 +2,15 @@
 
 #include <memory>
 
+enum class SimulationPresets { 
+    UNITED_STATES, 
+    UNITED_KINGDOM, 
+    GERMANY,
+    RUSSIA,
+    INDIA
+};
+
+
 struct MediaBiasSimulator;
 
 struct MediaOutlet{

@@ -33,6 +33,7 @@ After the biases and polarisation calculations are complete, the media outlets t
 ### Stage Three
 
 Data is exported to a file via graphs. One can visualise changes incrementally (every 20 days) on a terminal
+
 ## Notes (Important)
 
 The program relies strictly on the standard C++ runtime library with zero external dependencies.
@@ -40,4 +41,4 @@ The program relies strictly on the standard C++ runtime library with zero extern
 
 ## Data-Driven vs OOP
 
-Data Driven approaches are far faster due to cache efficiency (storing in a sequential order in memory). It may be implemented in the future. The current model is a Object Oriented Model, which is generally easier to read/write c++ in.
+Data Driven approaches are far faster due to cache efficiency (storing in a sequential order in memory). It may be implemented in the future. The current model is a Object Oriented Model, which is generally easier to read/write c++ in.Another idea for enhanced performance would also be to implemented Parallel Processing and optimising the way voters and outlets find each other.

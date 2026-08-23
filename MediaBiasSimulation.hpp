@@ -1,48 +1,71 @@
 #pragma once
 
-//Media Outlet Struct
+struct MediaBiasSimulator;
+
+//State Media
+struct StateMediaOutlet{
+    int id = -1; 
+    float bias = 0.0f;
+    float total_influence = 0.0f; // State still tracks views for data analysis
+    float turn_influence = 0.0f;  // But no radicalisation
+};
+
+//Media Outlet Struct (Profit Driven)
 struct MediaOutlet{
     int id = 0;
-    float bias = 0.0;
-    float total_influence = 0.0;
-
-    void AddInfluence(float influence);
+    float bias = 0.0f;
+    float total_influence = 0.0f;
+    float turn_influence = 0.0f;
+    //days the outlet has not been making a profit
+    int consecutive_days_starving = 0; 
+    //Change Bias If No Influence
+    void radicaliseOutlets(MediaBiasSimulator& sim);
 
     void OutputData();
 };
 
-//Voter Struct
+//Voter Struct (Bias and Interest Driven)
 struct Voter{
     int id = 0;
-    float bias = 0.0;
+    float bias = 0.0f;
     //Function checking the bias a voter gains from a media outlet
-    void watchMediaOutlet(float voter_tolerance, float learning_rate, MediaOutlet& outlet);
+    void watchMediaOutlet(float voter_tolerance, float learning_rate, MediaOutlet& outlet);      //private media override
+    void watchMediaOutlet(float voter_tolerance, float learning_rate, StateMediaOutlet& outlet); //state media override
 
     void OutputData();
 };
 
+//Full Media Simulation
 struct MediaBiasSimulator{
 private:
-    //Randomisation attributes
-    std::mt19937 random_number_generator;
-
-    //Start and end of political spectrum
-    float start_spectrum = -1.0; //left wing/party A
-    float end_spectrum = 1.0; //right wing/party B
-
     //Random Number Getter Function
     float getRandomSpectrum();
 public:
+    int time_days = 0;
+    //Start and end of political spectrum
+    const float start_spectrum = -1.0f; //left wing/party A
+    const float end_spectrum = 1.0f; //right wing/party B
+
+    //Randomisation attributes
+    std::mt19937 random_number_generator;
+
     //Voter settings
-    float voter_start_randomgen = -0.8;    //Bias of voter (starting value) 
-    float voter_end_randomgen = 0.8;       //Bias of voter (ending value)  
-    float voter_tolerance = 0.2;           //Voter media outlet (range of viewpoints) tolerance
-    float learning_rate = 0.1;             //How fast the voter is affected by bias and picks up different viewpoints
+    float voter_start_randomgen = -0.75f;   //Bias of voter (starting value) 
+    float voter_end_randomgen = 0.75f;      //Bias of voter (ending value)  
+    float voter_tolerance = 0.4f;           //Voter media outlet (range of viewpoints) tolerance
+    float learning_rate = 0.005f;           //How fast the voter is affected by bias and picks up different viewpoints
+
+    //Outlet settings
+    float minimum_share_percentage = 0.10f; // Outlets expect at least 10% of a "fair share" of the market
+    float current_influence_threshold = 0.0f;
+    float radicalisation_rate = 0.02f;  // How fast they polarise
 
     //Array of organisations and peoples
     std::vector<Voter> voters;
     std::vector<MediaOutlet> outlets;
-
+    StateMediaOutlet state_media; // #TODO May make into a vector and add government support
+    //Data
+    float average_voter_bias = 0.0f;
     //Constructor/Startup Function
     MediaBiasSimulator(int voter_number, int outlet_number);
     
@@ -52,4 +75,28 @@ public:
     void outputOutletBias();
     //Main Function for Turns/FPS
     void tick();
+
+    //Calculate Influence Needed
+    void setDynamicInfluenceThreshold() {
+        if (outlets.empty()) return;
+
+        // 1. Calculate an even split of all voters among all outlets
+        float fair_share = static_cast<float>(voters.size()) / outlets.size();
+        // 2. Multiply by the minimum acceptable percentage (e.g., 0.10f for 10%)
+        current_influence_threshold =  fair_share * minimum_share_percentage;
+    }
+
+    void setAvgVoterBias(){
+        if(voters.empty()) return;
+        float total_bias = 0.0f;
+        for(Voter& v:voters){
+            total_bias+=v.bias;
+        }
+        average_voter_bias = total_bias/voters.size();
+    }
+
+    //AI-Made ASCII Function (Tedious Graph Work)
+    void generateReportAndGraph();
+
+
 };

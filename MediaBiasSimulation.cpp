@@ -63,7 +63,7 @@ void PrivateMediaOutlet::radicaliseOutlets(MediaBiasSimulator& sim){
         }
         else if(bias<=0.0){
             bias-=bias_delta; //go more to left
-            if (bias < sim.voter_start_randomgen) { //error checker
+            if (bias < sim.start_spectrum) { //error checker
                 bias = sim.start_spectrum;
             }
         }

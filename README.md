@@ -19,7 +19,7 @@ The project synthesizes a basic version of two formal models from computational 
 
 ## 2. How it Works
 
-Each discrete simulation turn represents one operational epoch ($t = \text{day}$).
+Each discrete simulation turn represents one epoch ($t = \text{day}$).
 
 ### Stage One
 

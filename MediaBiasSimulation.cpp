@@ -18,6 +18,11 @@
 #include "Voter.hpp"
 #include "TerminalInput.hpp"
 
+//Add Windows Compatibility Library
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 //Startup Functions with Constructor
 float MediaBiasSimulator::getRandomSpectrum() {
     //get random number
@@ -265,6 +270,11 @@ void MediaBiasSimulator::tick(){
 }
 
 int main() {
+    //Use UTF-8 so generateReportAndGraph function works on windows
+    #ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+    #endif
+
     //Terminal Input Structs
     TerminalInput terminal_input;
     SimulationPresets selected_mode = SimulationPresets::UNITED_STATES; 

@@ -87,109 +87,80 @@ void MediaBiasSimulator::setAvgVoterBias(){
     }
     average_voter_bias = total_bias/voters.size();
 }
-//Get Data (AI-Made Data-Visualisation Function)
+//Get Data (Data-Visualisation Function)
 void MediaBiasSimulator::generateReportAndGraph(int num_steps, int chart_height) {
     if (num_steps <= 0 || chart_height <= 0) return;
 
-    // Default target scale floor
-    const int BASE_MAX_VOTERS = 1000;
-
+    // Setup Data Arrays
     std::vector<int> bins(num_steps, 0);
     std::vector<std::vector<std::string>> outlet_markers(num_steps);
     int max_bin_count = 0;
 
-    for (const auto& voter : voters) {
-        float normalized = (voter.bias + 1.0f) / 2.0f;
-        int bin_idx = static_cast<int>(normalized * num_steps);
-        bin_idx = std::clamp(bin_idx, 0, num_steps - 1);
-        bins[bin_idx]++;
-        max_bin_count = std::max(max_bin_count, bins[bin_idx]);
+    // lambda to cleanly convert any voter bias on the gradient to a column bin index
+    auto get_bin = [num_steps](float bias) {
+        int idx = static_cast<int>(((bias + 1.0f) / 2.0f) * num_steps);
+        return std::clamp(idx, 0, num_steps - 1);
+    };
+
+    // Add columns
+    for (const auto& v : voters) {
+        int idx = get_bin(v.bias);
+        bins[idx]++;
+        max_bin_count = std::max(max_bin_count, bins[idx]);
+    }
+    int max_scale = std::max(1000, max_bin_count);
+
+    // Add Media Outlet Names
+    for (const auto& o : outlets) {
+        std::string label = (o->id == -1) ? "State" : "O" + std::to_string(o->id);
+        outlet_markers[get_bin(o->bias)].push_back(label);
     }
 
-    // Dynamic scale ceiling: 1000 minimum, expands if a bin overflows
-    int active_max_scale = std::max(BASE_MAX_VOTERS, max_bin_count);
-
-    for (const auto& outlet : outlets) {
-        float normalized = (outlet->bias + 1.0f) / 2.0f;
-        int outlet_bin = static_cast<int>(normalized * num_steps);
-        outlet_bin = std::clamp(outlet_bin, 0, num_steps - 1);
-
-        std::string label = (outlet->id == -1) ? "State Media" : "O" + std::to_string(outlet->id);
-        outlet_markers[outlet_bin].push_back(label);
-    }
-
-    bool should_print_to_screen = (time_days % 20 == 0);
+    // Append to Files
+    if (time_days % 20 != 0) return; // Only run logs on specific intervals
+    
     std::ofstream file("simulation_log.txt", std::ios::app);
-
-    auto log_output = [&](const std::string& text) {
-        if (should_print_to_screen) std::cout << text;
+    auto print = [&](const std::string& text) {
+        std::cout << text;
         if (file.is_open()) file << text;
     };
 
-    log_output("\n================= VOTER DISTRIBUTION & MEDIA LOCATIONS (Day " + std::to_string(time_days) + ") =================\n\n");
-
+    // Draw the Bar Chart Matrix Rows
+    print("\n================= VOTER DISTRIBUTION (Day " + std::to_string(time_days) + ") =================\n\n");
     for (int row = chart_height; row >= 1; --row) {
-        std::stringstream line;
-        
-        // Calculate y-axis label based on active ceiling
-        int y_val = (active_max_scale * row) / chart_height;
-        line << std::setw(6) << y_val << " | ";
-        
+        print(std::string(4 - std::to_string((max_scale * row) / chart_height).length(), ' ') + std::to_string((max_scale * row) / chart_height) + " | ");
         for (int i = 0; i < num_steps; ++i) {
-            // Calculate height using active max scale
-            int current_height = (bins[i] * chart_height) / active_max_scale;
-            if (current_height >= row) {
-                line << " █  ";
-            } else {
-                line << "    ";
-            }
+            print(((bins[i] * chart_height) / max_scale >= row) ? " █  " : "    ");
         }
-        line << "\n";
-        log_output(line.str());
+        print("\n");
     }
 
-    std::stringstream axis_line;
-    axis_line << "       +" << std::string(num_steps * 4, '-');
-    axis_line << " (Scale Max: " << active_max_scale;
-    if (active_max_scale > BASE_MAX_VOTERS) {
-        axis_line << " [OVERFLOW]";
-    }
-    axis_line << ")\n";
-    log_output(axis_line.str());
-
-    std::stringstream labels_line;
-    labels_line << " bias: ";
+    // Draw the Bottom Axis, Labels, and Labels Scale
+    print("       +" + std::string(num_steps * 4, '-') + " (Max: " + std::to_string(max_scale) + ")\n bias: ");
     for (int i = 0; i < num_steps; ++i) {
-        float bin_center = -1.0f + ((static_cast<float>(i) + 0.5f) * (2.0f / static_cast<float>(num_steps)));
-        labels_line << std::fixed << std::setw(4) << std::setprecision(1) << bin_center;
+        float center = -1.0f + ((i + 0.5f) * (2.0f / num_steps));
+        print(std::to_string(center).substr(0, 4) + " "); // Simple substring formatting trick
     }
-    labels_line << "\n";
-    log_output(labels_line.str());
+    print("\n");
 
-    bool has_outlets = true;
-    size_t marker_depth = 0;
-    while (has_outlets) {
-        has_outlets = false;
-        std::stringstream media_line;
-        media_line << " media:";
+    // Add Media Markers
+    bool items_left = true;
+    for (size_t depth = 0; items_left; depth++) {
+        items_left = false;
+        print(" media:");
         for (int i = 0; i < num_steps; ++i) {
-            if (marker_depth < outlet_markers[i].size()) {
-                media_line << std::setw(4) << outlet_markers[i][marker_depth];
-                if (marker_depth + 1 < outlet_markers[i].size()) {
-                    has_outlets = true;
-                }
+            if (depth < outlet_markers[i].size()) {
+                print(" " + outlet_markers[i][depth] + std::string(3 - outlet_markers[i][depth].length(), ' '));
+                if (depth + 1 < outlet_markers[i].size()) items_left = true;
             } else {
-                media_line << "    ";
+                print("    ");
             }
         }
-        media_line << "\n";
-        log_output(media_line.str());
-        marker_depth++;
+        print("\n");
     }
-
-    log_output("\n========================================================================\n");
-    if (file.is_open()) file.close();
-
+    print("\n========================================================================\n"); // separator line? 
+    
+    if (file.is_open()){ file.close(); }
     renderStandardDeviationBar();
 }
 //Std Calculator Function

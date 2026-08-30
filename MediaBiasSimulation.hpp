@@ -1,53 +1,11 @@
 #pragma once
 
 #include <memory>
+#include <vector>
+#include <random>
 
-enum class SimulationPresets { 
-    UNITED_STATES, 
-    UNITED_KINGDOM, 
-    GERMANY,
-    RUSSIA,
-    INDIA
-};
-
-
-struct MediaBiasSimulator;
-
-struct MediaOutlet{
-    int id = 0;
-    float bias = 0.0f;
-    float total_influence = 0.0f;
-    float turn_influence = 0.0f;
-
-    void OutputData();
-};
-
-//State Media
-struct StateMediaOutlet : MediaOutlet{
-    // The State Media still tracks views for data analysis
-    // But no radicalisation exists
-    StateMediaOutlet(){
-        id=-1; // Sentinel value as exception
-    }
-};
-
-//Media Outlet Struct (Profit Driven)
-struct PrivateMediaOutlet : MediaOutlet{
-    //days the outlet has not been making a profit
-    int consecutive_days_starving = 0; 
-    //Change Bias If No Influence
-    void radicaliseOutlets(MediaBiasSimulator& sim);
-};
-
-//Voter Struct (Bias and Interest Driven)
-struct Voter{
-    int id = 0;
-    float bias = 0.0f;
-    //Function checking the bias a voter gains from a media outlet
-    void watchMediaOutlet(float voter_tolerance, float learning_rate, MediaOutlet& outlet);  
-
-    void OutputData();
-};
+struct Voter;
+struct MediaOutlet;
 
 //Full Media Simulation
 struct MediaBiasSimulator{
@@ -70,7 +28,7 @@ public:
     float learning_rate = 0.005f;           //How fast the voter is affected by bias and picks up different viewpoints
 
     //Outlet settings
-    float minimum_share_percentage = 0.10f; // Outlets expect at least 10% of a "fair share" of the market
+    float minimum_share_percentage = 0.10f; // Outlets expect at least 10% of a fair market share to sustain themselves 
     float current_influence_threshold = 0.0f;
     float radicalisation_rate = 0.02f;  // How fast they polarise
 
@@ -85,6 +43,7 @@ public:
     // ### FUNCTIONS ###
     //Constructor/Startup Function
     MediaBiasSimulator(int voter_number, int outlet_number);
+    void prepareSimulator();
     //Terminal Output Function
     void outputVoterBias();
     //Terminal Output Function
@@ -93,26 +52,11 @@ public:
     void tick();
 
     //Calculate Influence Needed
-    void setDynamicInfluenceThreshold() {
-        if (outlets.empty()) return;
-
-        // 1. Calculate an even split of all voters among all outlets
-        float fair_share = static_cast<float>(voters.size()) / outlets.size();
-        // 2. Multiply by the minimum acceptable percentage (e.g., 0.10f for 10%)
-        current_influence_threshold =  fair_share * minimum_share_percentage;
-    }
-
-    void setAvgVoterBias(){
-        if(voters.empty()) return;
-        float total_bias = 0.0f;
-        for(Voter& v:voters){
-            total_bias+=v.bias;
-        }
-        average_voter_bias = total_bias/voters.size();
-    }
+    void setDynamicInfluenceThreshold();
+    void setAvgVoterBias();
 
     //AI-Made ASCII Function (Tedious Graph Work)
-    void generateReportAndGraph();
+    void generateReportAndGraph(int num_steps, int chart_height);
     //Polarisation Bar
     void renderStandardDeviationBar();
 
